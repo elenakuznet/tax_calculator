@@ -6,6 +6,23 @@ new Intl.NumberFormat('ru-Ru', {
     }).format(n);  
 
 
+const debounceTimer = (fn, msec) => {
+    let lastCall = 0;
+    let lastCallTimer;
+
+    return () => {
+        const previousCall = lastCall;
+        lastCall = Date.now();
+
+        if (previousCall && ((lastCall - previousCall) <= msec)) {
+            clearTimeout()
+        }
+        lastCallTimer = setTimeout(() => {
+            fn();
+        }, msec)
+    }
+}
+
 {
     // Навигация
     const navigationLinks = document.querySelectorAll('.navigation__link');
@@ -36,18 +53,20 @@ new Intl.NumberFormat('ru-Ru', {
     const calcLabelExpenses = ausn.querySelector('.calc__label_expenses');
 
     calcLabelExpenses.style.display = 'none';
-    formAusn.addEventListener('input', () => {
+    formAusn.addEventListener('input', debounceTimer(() => {
+        const income = +formAusn.income.value;
         if (formAusn.type.value === 'income') {
             calcLabelExpenses.style.display = 'none';
-        resultTaxTotal.textContent = formatCurrency(formAusn.income.value * 0.08); 
+        resultTaxTotal.textContent = formatCurrency(income * 0.08); 
         formAusn.expenses.value = '';
         }
         if (formAusn.type.value === 'expenses') {
             calcLabelExpenses.style.display = '';
-        resultTaxTotal.textContent = formatCurrency((formAusn.income.value - formAusn.expenses.value) * 0.2); 
+            const expenses = +formAusn.expenses.value;
+            const profit = income < expenses ? 0 : income - expenses;
+            resultTaxTotal.textContent = formatCurrency(profit * 0.2); 
         }
-        
-    });
+    }, 500));
 }
 
 
@@ -63,7 +82,6 @@ new Intl.NumberFormat('ru-Ru', {
     const resultTaxResCompensation = selfEmployment.querySelector('.result__tax_res-compensation');
     const resultTaxResult = selfEmployment.querySelector('.result__tax_result');
 
-
     const checkCompensation = () => {
     const setDisplay = selfEmploymentForm.addCompensation.checked ? '' : 'none';
     calcCompensation.style.display = setDisplay;
@@ -74,22 +92,24 @@ new Intl.NumberFormat('ru-Ru', {
     };
     checkCompensation();
 
-    selfEmploymentForm.addEventListener('input', () => {
+    selfEmploymentForm.addEventListener('input', debounceTimer(() => {
+        const individual = +selfEmploymentForm.individual.value;
+        const entity = +selfEmploymentForm.entity.value;
 
-        const resIndividual = selfEmploymentForm.individual.value * 0.04; 
-        const resEntity = selfEmploymentForm.entity.value * 0.06;
+        const resIndividual = individual * 0.04; 
+        const resEntity = entity * 0.06;
 
         checkCompensation();
 
         const tax = resIndividual + resEntity;
+        
         selfEmploymentForm.compensation.value = 
-        selfEmploymentForm.compensation.value > 10_000
+        +selfEmploymentForm.compensation.value > 10_000
         ? 10_000 
         : selfEmploymentForm.compensation.value;
         
-        const benefit = selfEmploymentForm.compensation.value;
-        const resBenefit = selfEmploymentForm.individual.value * 0.01 +
-                selfEmploymentForm.entity.value * 0.02;
+        const benefit = +selfEmploymentForm.compensation.value;
+        const resBenefit = individual * 0.01 + entity * 0.02;
         const finalBenefit = benefit - resBenefit > 0 ? benefit - resBenefit : 0;
         const finalTax = tax - (benefit - finalBenefit);
 
@@ -97,8 +117,7 @@ new Intl.NumberFormat('ru-Ru', {
         resultTaxCompensation.textContent = formatCurrency(benefit - finalBenefit); 
         resultTaxResCompensation.textContent = formatCurrency(finalBenefit); 
         resultTaxResult.textContent = formatCurrency(finalTax);    
-    });
-
+    }, 500));
 }
 
 {
@@ -106,7 +125,6 @@ new Intl.NumberFormat('ru-Ru', {
 
     const osno = document.querySelector('.osno');
     const formOsno = osno.querySelector('.calc__form');
-
 
     const ndflExpenses = osno.querySelector('.result__block_hdfl-expenses');
     const ndflIncome = osno.querySelector('.result__block_ndfl-income');
@@ -131,28 +149,26 @@ new Intl.NumberFormat('ru-Ru', {
         }
     };
 
-
-    formOsno.addEventListener('input', () => {
+    formOsno.addEventListener('input', debounceTimer(() => {
         checkFormBusiness();
-        const income = formOsno.income.value;
-        const expenses = formOsno.expenses.value;
-        const property = formOsno.property.value;
+        const income = +formOsno.income.value;
+        const expenses = +formOsno.expenses.value;
+        const property = +formOsno.property.value;
 
         const nds = income * 0.2;
         const taxProperty = property * 0.02;
-        const profit = income - expenses;
+        const profit = income < expenses ? 0 : income - expenses;
         const ndflExpensesTotal = profit * 0.13;
         const ndflIncomeTotal = (income - nds) * 0.13;
         const taxProfit = profit * 0.2;
 
-        resultTaxNds.textContent = nds;
-        resultTaxProperty.textContent = taxProperty;
-        resultTaxNdflExpenses.textContent = ndflExpensesTotal;
-        resultTaxNdflIncome.textContent = ndflIncomeTotal;
-        resultTaxProfit.textContent = taxProfit;
+        resultTaxNds.textContent = formatCurrency(nds);
+        resultTaxProperty.textContent = formatCurrency(taxProperty);
+        resultTaxNdflExpenses.textContent = formatCurrency(ndflExpensesTotal);
+        resultTaxNdflIncome.textContent = formatCurrency(ndflIncomeTotal);
+        resultTaxProfit.textContent = formatCurrency(taxProfit);
         
-    });
-
+    }, 500));
 }
 
 {
@@ -194,7 +210,6 @@ new Intl.NumberFormat('ru-Ru', {
                 resultBlockProperty.style.display = '';
                 break;
             };
-
         }
     }
 
@@ -206,14 +221,13 @@ new Intl.NumberFormat('ru-Ru', {
 
     checkShopProperty(usnForm.typeTax.value);
 
-    usnForm.addEventListener('input', () => {
+    usnForm.addEventListener('input', debounceTimer(() => {
         checkShopProperty(usnForm.typeTax.value);
 
-    
-        const income = usnForm.income.value;
-        const expenses = usnForm.expenses.value;
-        const contribution = usnForm.contribution.value;
-        const property = usnForm.property.value;
+        const income = +usnForm.income.value;
+        const expenses = +usnForm.expenses.value;
+        const contribution = +usnForm.contribution.value;
+        const property = +usnForm.property.value;
 
         let profit = income - contribution;
 
@@ -229,11 +243,35 @@ new Intl.NumberFormat('ru-Ru', {
         resultTaxTotal.textContent = formatCurrency(tax < 0 ? 0 : tax);
         resultTaxProperty.textContent = formatCurrency(taxProperty);
 
-    });
+    }, 500));
 }
-
 
 {
     // Налоговый вычет
-    
+
+    const taxReturn = document.querySelector('.tax-return');
+    const taxReturnForm = taxReturn.querySelector('.calc__form');
+
+    const resultTaxNdfl = taxReturn.querySelector('.result__tax-ndfl');
+    const resultTaxPossible = taxReturn.querySelector('.result__tax-possible');
+    const resultTaxDeduction = taxReturn.querySelector('.result__tax-deduction');
+
+    taxReturnForm.addEventListener('input', debounceTimer(() => {
+        const expenses = +taxReturnForm.expenses.value;
+        const income = +taxReturnForm.income.value;
+
+        const sumExpense = +taxReturnForm.sumExpenses.value;
+
+        const ndfl = income * 0.13;
+        const possibleDeduction = expenses < sumExpense 
+        ? expenses * 0.13 
+        : sumExpense * 0.13;
+
+        const deduction = possibleDeduction < ndfl ? possibleDeduction : ndfl;
+
+        resultTaxNdfl.textContent = formatCurrency(ndfl);
+        resultTaxPossible.textContent = formatCurrency(possibleDeduction);
+        resultTaxDeduction.textContent = formatCurrency(deduction);
+
+    }, 500))    
 }
